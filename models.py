@@ -9,3 +9,4 @@ class Product(Base):
     name = Column(String, nullable=False)
     qty_sent = Column(Integer, default=0)
     qty_received = Column(Integer, default=0)
+    qty_damaged = Column(Integer, default=0)
