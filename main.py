@@ -25,7 +25,8 @@ def add_product(
     new_product = Product(
         name=product.name,
         qty_sent=product.qty_sent,
-        qty_received=product.qty_received
+        qty_received=product.qty_received,
+        qty_damaged=product.qty_damaged
     )
 
     db.add(new_product)
@@ -38,7 +39,8 @@ def add_product(
             "id": new_product.id,
             "name": new_product.name,
             "qty_sent": new_product.qty_sent,
-            "qty_received": new_product.qty_received
+            "qty_received": new_product.qty_received,
+            "qty_damaged": new_product.qty_damaged
         }
     }
 
@@ -63,6 +65,7 @@ def register_shipment(
 
     product.qty_sent += shipment.qty_sent
     product.qty_received += shipment.qty_received
+    product.qty_damaged += shipment.qty_damaged
 
     db.commit()
     db.refresh(product)
@@ -71,7 +74,8 @@ def register_shipment(
         "message": "Shipment movement added successfully",
         "product_id": product.id,
         "qty_sent": product.qty_sent,
-        "qty_received": product.qty_received
+        "qty_received": product.qty_received,
+        "qty_damaged": product.qty_damaged
     }
 
 
@@ -92,11 +96,24 @@ def calculate_difference(
             detail="Product not found"
         )
 
-    difference = product.qty_sent - product.qty_received
+    # Calculate missing quantity
+    qty_missing = (
+        product.qty_sent
+        - (product.qty_received + product.qty_damaged)
+    )
 
-    if difference == 0:
+    # Calculate damaged percentage
+    damage_percentage = (
+        product.qty_damaged / product.qty_sent
+    ) * 100 if product.qty_sent > 0 else 0
+
+    # Determine shipment status
+    if damage_percentage > 5:
+        status = "DAMAGED_ALERT"
+
+    elif qty_missing == 0:
         status = "مطابقة"
-    elif difference > 0:
+    elif qty_missing > 0:
         status = "عجز"
     else:
         status = "فائض"
@@ -106,7 +123,9 @@ def calculate_difference(
         "product_name": product.name,
         "qty_sent": product.qty_sent,
         "qty_received": product.qty_received,
-        "difference": difference,
+        "qty_damaged": product.qty_damaged,
+        "qty_missing": qty_missing,
+        "damage_percentage": round(damage_percentage, 2),
         "status": status
     }
 
